@@ -1,0 +1,26 @@
+# Применить всё сразу: kubectl apply -k k8s/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: urbanhouse
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - postgres.yaml
+  - backend.yaml
+  - hpa.yaml
+  - ingress.yaml
+  - networkpolicy.yaml
+
+# Схема БД кладётся в ConfigMap и монтируется в контейнер PostgreSQL.
+# Файл initdb/01-schema.sql это копия db/init/01-schema.sql (kustomize не читает файлы вне своей папки).
+# После изменения схемы скопируйте файл заново: cp db/init/01-schema.sql k8s/initdb/
+configMapGenerator:
+  - name: postgres-initdb
+    files:
+      - initdb/01-schema.sql
+
+generatorOptions:
+  disableNameSuffixHash: true

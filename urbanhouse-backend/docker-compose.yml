@@ -1,0 +1,54 @@
+# Приложение + PostgreSQL одной командой: docker compose up -d --build
+# Значения берутся из файла .env (см. .env.example)
+name: urbanhouse
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Укажите DB_PASSWORD в файле .env}
+      POSTGRES_DB: ${DB_NAME:-urbanhouse}
+    volumes:
+      # данные БД переживают перезапуск контейнера
+      - pgdata:/var/lib/postgresql/data
+      # скрипты из этой папки выполняются один раз, при создании пустой БД
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      # наружу только на localhost и на порт 5433, чтобы не конфликтовать с локальным PostgreSQL
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend
+
+  app:
+    build: .
+    image: urbanhouse-backend:1.0.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-urbanhouse}
+      JWT_SECRET: ${JWT_SECRET:?Укажите JWT_SECRET в файле .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: "3000"
+    ports:
+      - "${PORT:-3000}:3000"
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+
+networks:
+  backend:

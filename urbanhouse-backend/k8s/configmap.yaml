@@ -1,0 +1,14 @@
+# Несекретные настройки приложения и БД
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  labels:
+    app: backend
+data:
+  DB_HOST: postgres        # имя Service с PostgreSQL
+  DB_PORT: "5432"
+  DB_NAME: urbanhouse
+  DB_USER: postgres
+  JWT_EXPIRES_IN: 7d
+  PORT: "3000"
